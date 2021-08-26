@@ -1,0 +1,79 @@
+import requests
+from bs4 import BeautifulSoup
+import csv
+
+news_file = open('news_kommersant_1.csv', 'w', newline = '', encoding = 'Windows-1251')
+
+base_link = 'https://kommersant.ru'
+
+news_number = 0
+mm = 2
+
+trash1 = 'в материале “Ъ FM”'
+trash2 = 'в материале “Ъ”'
+trash3 = 'в публикации “Ъ”'
+trash4 = 'в публикации “Ъ FM”'
+
+
+for mm in range(1, 13):
+    dd = 1
+    for dd in range(1, 32):
+        if (dd < 10) and (mm < 10):
+            r = requests.get('https://www.kommersant.ru/archive/news/day/2020-0' + str(mm) + '-0' + str(dd))
+        elif (dd > 9) and (mm < 10):
+            r = requests.get('https://www.kommersant.ru/archive/news/day/2020-0' + str(mm) + '-' + str(dd))
+        elif (dd < 10) and (mm > 9):
+            r = requests.get('https://www.kommersant.ru/archive/news/day/2020-' + str(mm) + '-0' + str(dd))
+        elif (dd > 9) and (mm > 9):
+            r = requests.get('https://www.kommersant.ru/archive/news/day/2020-' + str(mm) + '-' + str(dd))
+        elif (mm == 2) and (dd > 29) or (mm == 4) and (dd == 31) or (mm == 6) and (dd == 31) or (mm == 9) and (dd == 31) or (mm == 11) and (dd == 31):
+            continue
+
+        #if r.status_code != 200:
+            #print('Эта страница не загрузилась!')    
+        
+        soup = BeautifulSoup (r.content, features='html.parser')
+        news = soup.findAll ('li', {'class':'archive_date_result__item'})
+
+        for a1 in news:
+            link = a1.find('a', href = True) ['href']
+            #print(link)
+            data0 = str(dd) + '-' + str(mm) + '-20'
+            print(str(dd) + '-' +str(mm))
+            data1 = 'kommersant.ru' + link 
+            news_number += 1
+            curr_news = requests.get(base_link + link)
+            news_soup = BeautifulSoup(curr_news.content, features='html.parser')
+            news_title = news_soup.find('title').text
+            news_title_1 = news_title.split(' - ')
+            data2 = news_title_1[0]
+            article = news_soup.findAll('p', {'class':'b-article__text'})
+            data3 = ''
+    
+            for paragraph in article:
+                if trash1 in paragraph.text:
+                    continue
+                elif trash2 in paragraph.text:
+                    continue
+                elif trash3 in paragraph.text:
+                    continue
+                elif trash4 in paragraph.text:
+                    continue
+                else:
+                    data3 = data3 + paragraph.text + ' <> '
+                
+            try:    
+                writer = csv.writer(news_file, delimiter = '|')
+                writer.writerow([data0, data1, data2, data3])
+            except:
+                continue
+
+        dd += 1
+        
+  
+    mm += 1
+    
+
+news_file.close()
+print('Готово!')
+print(news_number)
